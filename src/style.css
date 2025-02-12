@@ -1,0 +1,23 @@
+#menu-path {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  color: white;
+  font-family: Arial, sans-serif;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  border-radius: 5px;
+}
+#back-button {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  padding: 10px 20px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  z-index: 9999;
+}
