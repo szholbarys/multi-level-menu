@@ -14,6 +14,15 @@ This project is an interactive 3D multi-level menu created using A-Frame and Jav
 
 ```bash
 git clone https://github.com/szholbarys/multi-level-menu.git
+
+```
+
+```bash
+cd multi-level-menu
+```
+
+```bash
+npm i
 ```
 
 ```bash
