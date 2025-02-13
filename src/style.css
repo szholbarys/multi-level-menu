@@ -9,6 +9,7 @@
   padding: 10px;
   border-radius: 5px;
 }
+
 #back-button {
   position: fixed;
   top: 10px;
@@ -20,4 +21,66 @@
   border-radius: 5px;
   cursor: pointer;
   z-index: 9999;
+  transition: background-color 0.3s;
+}
+
+#back-button:hover {
+  background-color: #45a049;
+}
+
+#menu-controls {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 9999;
+}
+
+#menu-controls button {
+  padding: 10px 20px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: Arial, sans-serif;
+  transition: background-color 0.3s;
+}
+
+#menu-controls button:hover {
+  background-color: #45a049;
+}
+
+#menu-controls button:active {
+  background-color: #3d8b40;
+}
+
+#delete-item {
+  background-color: #f44336 !important;
+}
+
+#delete-item:hover {
+  background-color: #da190b !important;
+}
+
+#prev-item,
+#next-item {
+  background-color: #2196f3 !important;
+}
+
+#prev-item:hover,
+#next-item:hover {
+  background-color: #0b7dda !important;
+}
+
+#export-config,
+#copy-path {
+  background-color: #ff9800 !important;
+}
+
+#export-config:hover,
+#copy-path:hover {
+  background-color: #e68a00 !important;
 }

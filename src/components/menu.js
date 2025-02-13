@@ -241,9 +241,27 @@ const menuData = {
 };
 
 let currentPath = [];
+let currentIndex = 0;
 const menuContainer = document.querySelector("#menu-container");
 const menuPathElement = document.querySelector("#menu-path");
 const backButton = document.querySelector("#back-button");
+
+document.body.insertAdjacentHTML(
+  "beforeend",
+  `
+  <div id="menu-controls">
+    <button id="prev-item">Previous</button>
+    <button id="next-item">Next</button>
+    <button id="delete-item">Delete Item</button>
+    <button id="copy-path">Copy Path</button>
+  </div>
+  `
+);
+
+const prevButton = document.querySelector("#prev-item");
+const nextButton = document.querySelector("#next-item");
+const deleteButton = document.querySelector("#delete-item");
+const copyPathButton = document.querySelector("#copy-path");
 
 function renderMenu(options) {
   menuContainer.innerHTML = "";
@@ -251,25 +269,15 @@ function renderMenu(options) {
   options.forEach((option, index) => {
     const xPos = index * 2 - (options.length - 1);
     const box = document.createElement("a-box");
+
     box.setAttribute("position", `${xPos} 0 0`);
     box.setAttribute("color", option.color);
     box.setAttribute("width", "1.5");
     box.setAttribute("height", "1.5");
     box.setAttribute("depth", "0.2");
     box.setAttribute("shadow", "");
-
-    box.setAttribute("animation__scale", {
-      property: "scale",
-      to: "1.2 1.2 1.2",
-      startEvents: "mouseenter",
-      dur: 200,
-    });
-    box.setAttribute("animation__scale_reverse", {
-      property: "scale",
-      to: "1 1 1",
-      startEvents: "mouseleave",
-      dur: 200,
-    });
+    box.setAttribute("class", "clickable");
+    box.setAttribute("scale", "1 1 1");
 
     const text = document.createElement("a-text");
     text.setAttribute("value", option.name);
@@ -279,12 +287,53 @@ function renderMenu(options) {
     text.setAttribute("color", "#FFFFFF");
     box.appendChild(text);
 
+    box.addEventListener("mouseenter", () => {
+      anime({
+        targets: box.object3D.position,
+        y: 0.2,
+        duration: 300,
+        easing: "easeOutBack",
+      });
+
+      anime({
+        targets: box.object3D.scale,
+        x: 1.2,
+        y: 1.2,
+        z: 1.2,
+        duration: 300,
+        easing: "easeOutElastic(1, .5)",
+      });
+    });
+
+    box.addEventListener("mouseleave", () => {
+      anime({
+        targets: box.object3D.position,
+        y: 0,
+        duration: 300,
+        easing: "easeOutBack",
+      });
+
+      anime({
+        targets: box.object3D.scale,
+        x: 1,
+        y: 1,
+        z: 1,
+        duration: 300,
+        easing: "easeOutElastic(1, .5)",
+      });
+    });
+
     box.addEventListener("click", () => handleClick(option));
+    box.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      deleteItem(option);
+    });
 
     menuContainer.appendChild(box);
   });
 
   updateMenuPath();
+  updateNavigationButtons();
 }
 
 function handleClick(option) {
@@ -293,6 +342,7 @@ function handleClick(option) {
     renderMenu(option.options);
   } else {
     currentPath.push(option);
+    currentIndex = 0;
     renderSingleItem(option);
   }
 }
@@ -307,6 +357,9 @@ function renderSingleItem(item) {
   box.setAttribute("height", "2");
   box.setAttribute("depth", "0.3");
   box.setAttribute("shadow", "");
+  box.setAttribute("class", "clickable");
+
+  box.setAttribute("material", "opacity: 0");
 
   const text = document.createElement("a-text");
   text.setAttribute("value", item.name);
@@ -316,8 +369,30 @@ function renderSingleItem(item) {
   text.setAttribute("color", "#FFFFFF");
   box.appendChild(text);
 
+  box.addEventListener("loaded", () => {
+    anime({
+      targets: box.getAttribute("material"),
+      opacity: 1,
+      duration: 500,
+      easing: "easeOutCubic",
+      update: function () {
+        box.setAttribute(
+          "material",
+          "opacity",
+          box.getAttribute("material").opacity
+        );
+      },
+    });
+  });
+
+  box.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+    deleteItem(item);
+  });
+
   menuContainer.appendChild(box);
   updateMenuPath();
+  updateNavigationButtons();
 }
 
 function updateMenuPath() {
@@ -325,19 +400,141 @@ function updateMenuPath() {
   menuPathElement.textContent = path || "Main Menu";
 }
 
+function deleteItem(targetItem) {
+  const currentMenu = menuData.menu_options;
+  const parentMenu = null;
+  const itemToDelete = null;
+  const parentPath = [];
+
+  function findItem(menu, target, path = []) {
+    for (let i = 0; i < menu.length; i++) {
+      const item = menu[i];
+      if (item === target) {
+        return {
+          found: true,
+          parent: menu,
+          index: i,
+          path: path,
+        };
+      }
+      if (item.options) {
+        const result = findItem(item.options, target, [...path, item]);
+        if (result.found) {
+          return result;
+        }
+      }
+    }
+    return { found: false };
+  }
+
+  const result = findItem(menuData.menu_options, targetItem);
+
+  if (result.found) {
+    result.parent.splice(result.index, 1);
+
+    exportJSON();
+
+    if (result.path.length > 0) {
+      currentPath = result.path;
+      renderMenu(result.path[result.path.length - 1].options);
+    } else {
+      currentPath = [];
+      renderMenu(menuData.menu_options);
+    }
+  }
+}
+
+function exportJSON() {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const dataStr = JSON.stringify(menuData, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `menu-config-${timestamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function copyCurrentPath() {
+  const path = currentPath.map((item) => item.name).join("/");
+  const url = `${window.location.origin}${
+    window.location.pathname
+  }#${encodeURIComponent(path)}`;
+  navigator.clipboard.writeText(url).then(() => {
+    alert("Path copied to clipboard!");
+  });
+}
+
+function updateNavigationButtons() {
+  const isLastLevel =
+    currentPath.length > 0 && !currentPath[currentPath.length - 1].options;
+  prevButton.style.display = isLastLevel ? "inline" : "none";
+  nextButton.style.display = isLastLevel ? "inline" : "none";
+  deleteButton.style.display = currentPath.length > 0 ? "inline" : "none";
+  copyPathButton.style.display = currentPath.length > 0 ? "inline" : "none";
+}
+
+function navigateItems(direction) {
+  if (currentPath.length > 0) {
+    const parentPath = currentPath.slice(0, -1);
+    let currentMenu = menuData.menu_options;
+
+    for (const item of parentPath) {
+      currentMenu = currentMenu.find((opt) => opt.name === item.name).options;
+    }
+
+    currentIndex =
+      (currentIndex + direction + currentMenu.length) % currentMenu.length;
+    renderSingleItem(currentMenu[currentIndex]);
+  }
+}
+
 function goBack() {
   if (currentPath.length > 0) {
     currentPath.pop();
-    if (currentPath.length === 0) {
-      renderMenu(menuData.menu_options);
+    if (currentPath.length > 0) {
+      const lastItem = currentPath[currentPath.length - 1];
+      if (lastItem.options) {
+        renderMenu(lastItem.options);
+      } else {
+        renderSingleItem(lastItem);
+      }
     } else {
-      renderMenu(currentPath[currentPath.length - 1].options);
+      renderMenu(menuData.menu_options);
     }
   }
 }
 
 backButton.addEventListener("click", goBack);
+prevButton.addEventListener("click", () => navigateItems(-1));
+nextButton.addEventListener("click", () => navigateItems(1));
+deleteButton.addEventListener("click", () => {
+  const currentItem = currentPath[currentPath.length - 1];
+  if (currentItem) {
+    deleteItem(currentItem);
+  }
+});
+copyPathButton.addEventListener("click", copyCurrentPath);
 
 document.addEventListener("DOMContentLoaded", () => {
   renderMenu(menuData.menu_options);
+
+  if (window.location.hash) {
+    const path = decodeURIComponent(window.location.hash.slice(1)).split("/");
+    let currentMenu = menuData.menu_options;
+
+    for (const itemName of path) {
+      const item = currentMenu.find((opt) => opt.name === itemName);
+      if (item) {
+        handleClick(item);
+        if (item.options) {
+          currentMenu = item.options;
+        }
+      }
+    }
+  }
 });
